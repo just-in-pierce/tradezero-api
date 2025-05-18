@@ -536,7 +536,6 @@ class TradeZero(Time):
         self.driver.find_element(By.ID, f"trading-order-button-{order_direction}").click()
 
         if log_info is True:
-            print(f"Time: {
-                self.time}, Order direction: {order_direction}, Symbol: {symbol}, "
+            print(f"Time: {self.time}, Order direction: {order_direction}, Symbol: {symbol}, "
                     f"Low Price: {low_price}, High Price: {high_price}, Shares amount: {share_amount}")
         return
