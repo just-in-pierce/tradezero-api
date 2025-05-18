@@ -5,8 +5,10 @@ import os
 import warnings
 from collections import namedtuple
 
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
+#from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.firefox.service import Service as FirefoxService
+#from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -40,13 +42,13 @@ class TradeZero(Time):
         self.password = password
         self.hide_attributes = hide_attributes
 
-        service = ChromeService(ChromeDriverManager().install())
-        options = webdriver.ChromeOptions()
-        options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        service =  FirefoxService(GeckoDriverManager().install())
+        options = webdriver.FirefoxOptions()
+        #options.add_experimental_option('excludeSwitches', ['enable-logging'])
         if headless is True:
             options.headless = headless
 
-        self.driver = webdriver.Chrome(service=service, options=options)
+        self.driver = webdriver.Firefox(service=service, options=options)
         self.driver.get(TZ_HOME_URL)
 
         self.Watchlist = Watchlist(self.driver)
@@ -485,3 +487,56 @@ class TradeZero(Time):
         if log_info is True:
             print(f"Time: {self.time}, Order direction: {order_direction}, Symbol: {symbol}, "
                   f"Stop Price: {stop_price}, Shares amount: {share_amount}")
+
+
+    @time_it
+    def range_order(self, order_direction: Order, symbol: str, share_amount: int, low_price: float,
+                   high_price: float, time_in_force: TIF = TIF.DAY, log_info: bool = False):
+        """
+        Place a Range Order, the following params are required: order_direction, symbol, share_amount,
+        limit_price and stop_price.
+
+        :param order_direction: str: 'buy', 'sell', 'short', 'cover'
+        :param symbol: str: e.g: 'aapl', 'amd', 'NVDA', 'GM'
+        :param low_price: float
+        :param high_price: float
+        :param share_amount: int
+        :param time_in_force: str, default: 'DAY', must be one of the following: 'DAY', 'GTC', or 'GTX'
+        :param log_info: bool, if True it will print information about the order
+        :return:
+        :raises AttributeError: if time_in_force argument not one of the following: 'DAY', 'GTC', 'GTX'
+        """
+        symbol = symbol.lower()
+        order_direction = order_direction.value
+        time_in_force = time_in_force.value
+
+        if time_in_force not in ['DAY', 'GTC', 'GTX']:
+            raise AttributeError(f"Error: time_in_force argument must be one of the following: 'DAY', 'GTC', 'GTX'")
+
+        self.load_symbol(symbol)
+
+        order_menu = Select(self.driver.find_element(By.ID, "trading-order-select-type"))
+        order_menu.select_by_index(6)
+
+        tif_menu = Select(self.driver.find_element(By.ID, "trading-order-select-time"))
+        tif_menu.select_by_visible_text(time_in_force)
+
+        input_quantity = self.driver.find_element(By.ID, "trading-order-input-quantity")
+        input_quantity.clear()
+        input_quantity.send_keys(share_amount)
+
+        low_price_input = self.driver.find_element(By.ID, "trading-order-input-price")
+        low_price_input.clear()
+        low_price_input.send_keys(low_price)
+
+        high_price_input = self.driver.find_element(By.ID, "trading-order-input-sprice")
+        high_price_input.clear()
+        high_price_input.send_keys(high_price)
+
+        self.driver.find_element(By.ID, f"trading-order-button-{order_direction}").click()
+
+        if log_info is True:
+            print(f"Time: {
+                self.time}, Order direction: {order_direction}, Symbol: {symbol}, "
+                    f"Low Price: {low_price}, High Price: {high_price}, Shares amount: {share_amount}")
+        return
