@@ -102,7 +102,7 @@ class Portfolio:
 
         df = pd.read_html(self.driver.page_source, attrs={'id': 'aoTable-1'})[0]
         df = df.drop(0, axis=1)  # remove the first column which contains the button "CANCEL"
-        df.columns = ['ref_number', 'symbol', 'side', 'qty', 'type', 'status', 'tif', 'limit', 'stop', 'placed']
+        df.columns = ['ref_number', 'symbol', 'side', 'qty', 'open', 'exec', 'type', 'status', 'tif', 'limit', 'stop', 'placed']
         # df = df.set_index('symbol')  # cant set it as a column since its not always unique
 
         if return_type == 'dict':
