@@ -118,7 +118,7 @@ class Portfolio:
         """
         return symbol.upper() in self.get_active_orders()['symbol'].values
 
-    def cancel_active_order(self, symbol: str, order_type: OrderType) -> None:
+    def cancel_active_order(self, symbol: str, order_ref_numbers: list) -> None:
         """
         Cancel a pending order
 
@@ -134,7 +134,7 @@ class Portfolio:
 
         # find the ref-id of all the orders we have to cancel:
         filt = (df['symbol'] == symbol) & (df['type'] == order_type)
-        ids_to_cancel = df[filt]['ref_number'].values
+        ids_to_cancel = order_ref_numbers
         ids_to_cancel = [x.replace('S.', '') for x in ids_to_cancel]
 
         for order_id in ids_to_cancel:
