@@ -130,7 +130,6 @@ class Portfolio:
         self._switch_portfolio_tab(tab=PortfolioTab.active_orders)
 
         df = self.get_active_orders()
-        assert symbol in df['symbol'].values, f'Given symbol {symbol} is not present in the active orders tab'
 
         # find the ref-id of all the orders we have to cancel:
         filt = (df['symbol'] == symbol) & (df['type'] == order_type)
@@ -138,6 +137,9 @@ class Portfolio:
         ids_to_cancel = [x.replace('S.', '') for x in ids_to_cancel]
 
         for order_id in ids_to_cancel:
-            cancel_button = self.driver.find_element(
-                By.XPATH, f'//div[@id="portfolio-content-tab-ao-1"]//*[@order-id="{order_id}"]/td[@class="red"]')
-            cancel_button.click()
+            try:
+                cancel_button = self.driver.find_element(
+                    By.XPATH, f'//div[@id="portfolio-content-tab-ao-1"]//*[@order-id="{order_id}"]/td[@class="red"]')
+                cancel_button.click()
+            except:
+                print(f'Could not cancel order with ref number {order_id} for symbol {symbol}. It may have already been executed or canceled.')
