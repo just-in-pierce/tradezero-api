@@ -338,17 +338,16 @@ class TradeZero(Time):
             if quantity % 100 != 0:
                 raise ValueError(f"ERROR! quantity is not divisible by 100 ({quantity=})")
 
-            located_shares = float(self.driver.find_element(By.ID, f"inv-{symbol.upper()}-cell-1").text)
+            located_shares = float(self.driver.find_element(By.ID, f"inv-{symbol.upper()}-SingleUse-cell-2").text)
             if quantity > located_shares:
                 raise ValueError(f"ERROR! you cannot credit more shares than u already have "
                                  f"({quantity} vs {located_shares}")
 
-            input_quantity = self.driver.find_element(By.ID, f"inv-{symbol.upper()}-sell-qty")
+            input_quantity = self.driver.find_element(By.ID, f"inv-{symbol.upper()}-SingleUse-sell-qty")
             input_quantity.clear()
             input_quantity.send_keys(quantity)
 
-        self.driver.find_element(By.XPATH, f'//*[@id="inv-{symbol.upper()}-sell"]/button').click()
-        return
+        self.driver.find_element(By.XPATH, f'//*[@id="inv-{symbol.upper()}-SingleUse-sell"]/button').click()
 
     @time_it
     def limit_order(self, order_direction: Order, symbol: str, share_amount: int, limit_price: float,
