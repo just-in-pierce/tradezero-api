@@ -292,8 +292,8 @@ class TradeZero(Time):
 
         for i in range(300):
             try:
-                locate_pps = float(self.driver.find_element(By.ID, f"oitem-l-{symbol.upper()}-cell-2").text)
-                locate_total = float(self.driver.find_element(By.ID, f"oitem-l-{symbol.upper()}-cell-6").text)
+                locate_pps = float(self.driver.find_element(By.ID, f"oitem-l-{symbol.upper()}-SingleUse-cell-2").text)
+                locate_total = float(self.driver.find_element(By.ID, f"oitem-l-{symbol.upper()}-SingleUse-cell-6").text)
                 break
 
             except (ValueError, NoSuchElementException, StaleElementReferenceException):
@@ -308,11 +308,11 @@ class TradeZero(Time):
             raise Exception(f'Error: not able to locate symbol element ({symbol=})')
 
         if locate_total <= max_price:
-            self.driver.find_element(By.XPATH, f'//*[@id="oitem-l-{symbol.upper()}-cell-8"]/span[1]').click()
+            self.driver.find_element(By.XPATH, f'//*[@id="oitem-l-{symbol.upper()}-SingleUse-cell-8"]/span[1]').click()
             if debug_info:
                 print(colored(f'HTB Locate accepted ({symbol}, $ {locate_total})', 'cyan'))
         else:
-            self.driver.find_element(By.XPATH, f'//*[@id="oitem-l-{symbol.upper()}-cell-8"]/span[2]').click()
+            self.driver.find_element(By.XPATH, f'//*[@id="oitem-l-{symbol.upper()}-SingleUse-cell-8"]/span[2]').click()
 
         return Data(locate_pps, locate_total)
         # TODO create a function to get the pps and another one that just locates the shares
