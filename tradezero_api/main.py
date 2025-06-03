@@ -49,6 +49,7 @@ class TradeZero(Time):
             options.headless = headless
 
         self.driver = webdriver.Firefox(service=service, options=options)
+        self.driver.set_window_size(1920, 1080) # Important so that popups don't block elements
         self.driver.get(TZ_HOME_URL)
 
         self.Watchlist = Watchlist(self.driver)
