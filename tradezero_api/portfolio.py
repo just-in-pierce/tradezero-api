@@ -116,7 +116,14 @@ class Portfolio:
         :param symbol:
         :return: True or False
         """
-        return symbol.upper() in self.get_active_orders()['symbol'].values
+        active_orders = self.get_active_orders()
+        if active_orders is None:
+            return False
+        elif symbol.upper() in active_orders['symbol'].values:
+            return True
+        else:
+            warnings.warn(f'Symbol {symbol} is not present in active orders')
+            return False
 
     def cancel_active_order(self, symbol: str, order_ref_numbers: list) -> None:
         """

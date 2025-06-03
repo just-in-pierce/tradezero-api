@@ -94,6 +94,8 @@ class TradeZero(Time):
         if self.hide_attributes:
             self.Account.hide_attributes()
 
+        time.sleep(0.3)
+
         Select(self.driver.find_element(By.ID, "trading-order-select-type")).select_by_index(1)
 
     def conn(self, log_tz_conn: bool = False):
@@ -298,12 +300,12 @@ class TradeZero(Time):
 
             except (ValueError, NoSuchElementException, StaleElementReferenceException):
                 time.sleep(0.15)
-                if i == 15 or i == 299:
-                    insufficient_bp = 'Insufficient BP to short a position with requested quantity.'
-                    last_notif = self.Notification.get_last_notification_message()
-                    if insufficient_bp in last_notif:
-                        warnings.warn(f"ERROR! {insufficient_bp}")
-                        return
+                #if i == 15 or i == 299:
+                #    insufficient_bp = 'Insufficient BP to short a position with requested quantity.'
+                #    last_notif = self.Notification.get_last_notification_message()
+                #    if insufficient_bp in last_notif:
+                #        warnings.warn(f"ERROR! {insufficient_bp}")
+                #        return
         else:
             raise Exception(f'Error: not able to locate symbol element ({symbol=})')
 
@@ -531,7 +533,7 @@ class TradeZero(Time):
         high_price_input = self.driver.find_element(By.ID, "trading-order-input-sprice")
         high_price_input.clear()
         high_price_input.send_keys(high_price)
-
+        
         self.driver.find_element(By.ID, f"trading-order-button-{order_direction}").click()
 
         if log_info is True:
