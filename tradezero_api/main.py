@@ -15,6 +15,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException, WebDriverException, StaleElementReferenceException
 from termcolor import colored
+import pickle
 
 from .time_helpers import Time, Timer, time_it
 from .watchlist import Watchlist
@@ -44,6 +45,7 @@ class TradeZero(Time):
 
         service =  FirefoxService(GeckoDriverManager().install())
         options = webdriver.FirefoxOptions()
+
         #options.add_experimental_option('excludeSwitches', ['enable-logging'])
         if headless is True:
             options.headless = headless
@@ -51,6 +53,12 @@ class TradeZero(Time):
         self.driver = webdriver.Firefox(service=service, options=options)
         self.driver.set_window_size(1920, 1080) # Important so that popups don't block elements
         self.driver.get(TZ_HOME_URL)
+        try:
+            cookies = pickle.load(open("tz_cookies.pkl", "rb"))
+            for cookie in cookies:
+                self.driver.add_cookie(cookie)
+        except Exception as e:
+            print(colored(f"Error loading cookies: {e}", 'red'))
 
         self.Watchlist = Watchlist(self.driver)
         self.Portfolio = Portfolio(self.driver)
@@ -98,6 +106,8 @@ class TradeZero(Time):
         time.sleep(0.3)
 
         Select(self.driver.find_element(By.ID, "trading-order-select-type")).select_by_index(1)
+        self.driver.get("https://standard.tradezeroweb.us/")
+        pickle.dump(self.driver.get_cookies(), open("tz_cookies.pkl", "wb"))
 
     def conn(self, log_tz_conn: bool = False):
         """
