@@ -467,9 +467,7 @@ class TradeZero(Time):
         try:
             self.driver.find_element(By.ID, "short-locate-button-cancel").click()
             print(colored("Popup closed.", 'green'))
-        except NoSuchElementException:
-            pass
-        except StaleElementReferenceException:
+        except:
             pass
 
     @time_it
