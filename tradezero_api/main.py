@@ -453,12 +453,24 @@ class TradeZero(Time):
         if order_direction == Order.SHORT:
             try:
                 time.sleep(1)
-                self.driver.find_element(By.ID, "short-locate-button-cancel").click()
-                print(colored(f"Popup closed for {symbol.upper()}.", 'green'))
+                self.clear_popups()
                 return False
             except:
                 return True
         return True
+    
+    def clear_popups(self):
+        """
+        Clear any popups that might be blocking the page, such as 'locate shares' or 'short locate text message'.
+        This is useful when placing orders that require locating shares.
+        """
+        try:
+            self.driver.find_element(By.ID, "short-locate-button-cancel").click()
+            print(colored("Popup closed.", 'green'))
+        except NoSuchElementException:
+            pass
+        except StaleElementReferenceException:
+            pass
 
     @time_it
     def stop_market_order(self, order_direction: Order, symbol: str, share_amount: int, stop_price: float,
