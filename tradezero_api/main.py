@@ -453,7 +453,8 @@ class TradeZero(Time):
         if order_direction == Order.SHORT:
             try:
                 time.sleep(1)
-                self.clear_popups()
+                self.driver.find_element(By.ID, "short-locate-button-cancel").click()
+                print(colored("Popup closed.", 'green'))
                 return False
             except:
                 return True
