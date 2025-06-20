@@ -134,10 +134,7 @@ class Portfolio:
         symbol = symbol.upper()
         self._switch_portfolio_tab(tab=PortfolioTab.active_orders)
 
-        df = self.get_active_orders()
-
         # find the ref-id of all the orders we have to cancel:
-        filt = (df['symbol'] == symbol) & (df['type'] == order_type)
         ids_to_cancel = order_ref_numbers
         ids_to_cancel = [x.replace('S.', '') for x in ids_to_cancel]
 
