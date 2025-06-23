@@ -135,6 +135,7 @@ class Portfolio:
         self._switch_portfolio_tab(tab=PortfolioTab.active_orders)
 
         # find the ref-id of all the orders we have to cancel:
+        order_ref_numbers = [x[x.find("S.s:", x.find("S.s:") + 1):] for x in order_ref_numbers]
         ids_to_cancel = order_ref_numbers
         ids_to_cancel = [x.replace('S.', '') for x in ids_to_cancel]
 
