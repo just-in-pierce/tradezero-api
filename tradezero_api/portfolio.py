@@ -34,7 +34,7 @@ class Portfolio:
         :return: pandas.DataFrame or None if table empty
         """
         portfolio_symbols = self.driver.find_elements(By.XPATH, '//*[@id="opTable-1"]/tbody/tr/td[1]')
-        df = pd.read_html(self.driver.page_source, attrs={'id': 'opTable-1'})[0]
+        df = pd.read_html(self.driver.page_source, attrs={'id': 'opTable-1'}, keep_default_na=False)[0]
 
         if len(portfolio_symbols) == 0 or df.loc[0, 0].lower() == "you have no open positions.":
             warnings.warn('Portfolio is empty')
@@ -99,7 +99,7 @@ class Portfolio:
             warnings.warn('There are no active orders')
             return
 
-        df = pd.read_html(self.driver.page_source, attrs={'id': 'aoTable-1'})[0]
+        df = pd.read_html(self.driver.page_source, attrs={'id': 'aoTable-1'}, keep_default_na=False)[0]
         df = df.drop(0, axis=1)  # remove the first column which contains the button "CANCEL"
         df.columns = ['ref_number', 'symbol', 'side', 'qty', 'open', 'exec', 'type', 'status', 'tif', 'limit', 'stop', 'placed']
 
