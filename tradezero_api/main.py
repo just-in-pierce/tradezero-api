@@ -279,8 +279,8 @@ class TradeZero(Time):
         if not self.load_symbol(symbol):
             return
 
-        if self.last <= 1.00:
-            print(f'Error: Cannot locate stocks priced under $1.00 ({symbol=}, price={self.last})')
+        #if self.last <= 1.00:
+        #    print(f'Error: Cannot locate stocks priced under $1.00 ({symbol=}, price={self.last})')
 
         self.driver.find_element(By.ID, "locate-tab-1").click()
         input_symbol = self.driver.find_element(By.ID, "short-list-input-symbol")
@@ -303,32 +303,79 @@ class TradeZero(Time):
 
         self.driver.find_element(By.ID, "short-list-button-locate").click()
 
+        # We want to find SingleUse PreBorrow and Locate versions
+        # oitem-l-TICKER-PreBorrow-cell-1
+        # oitem-l-TICKER-SingleUse-cell-1
+        # oitem-l-TICKER-Locate-cell-1
+        locate_pps_preborrow = None
+        locate_pps_singleuse = None
+        locate_pps_locate = None
+        locate_total_preborrow = None
+        locate_total_singleuse = None
+        locate_total_locate = None
         for i in range(300):
             try:
-                locate_pps = float(self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-') and contains(@id, '-cell-2')]").text)
-                locate_total = float(self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-') and contains(@id, '-cell-6')]").text)
+                locate_pps_preborrow = float(self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-PreBorrow') and contains(@id, '-cell-2')]").text)
+                locate_total_preborrow = float(self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-PreBorrow') and contains(@id, '-cell-6')]").text)
+            except:
+                pass
+            try:
+                locate_pps_singleuse = float(self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-SingleUse') and contains(@id, '-cell-2')]").text)
+                locate_total_singleuse = float(self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-SingleUse') and contains(@id, '-cell-6')]").text)
+            except:
+                pass
+            try:
+                locate_pps_locate = float(self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-Locate') and contains(@id, '-cell-2')]").text)
+                locate_total_locate = float(self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-Locate') and contains(@id, '-cell-6')]").text)
+            except:
+                pass
+            if locate_pps_preborrow is not None or locate_pps_singleuse is not None or locate_pps_locate is not None:
                 break
-
-            except (ValueError, NoSuchElementException, StaleElementReferenceException):
+            else:
                 time.sleep(0.15)
-                #if i == 15 or i == 299:
-                #    insufficient_bp = 'Insufficient BP to short a position with requested quantity.'
-                #    last_notif = self.Notification.get_last_notification_message()
-                #    if insufficient_bp in last_notif:
-                #        warnings.warn(f"ERROR! {insufficient_bp}")
-                #        return
         else:
             raise Exception(f'Error: not able to locate symbol element ({symbol=})')
+        
+        #print(f'locate_pps_preborrow: {locate_pps_preborrow}, locate_total_preborrow: {locate_total_preborrow}')
+        #print(f'locate_pps_singleuse: {locate_pps_singleuse}, locate_total_singleuse: {locate_total_singleuse}')
+        #print(f'locate_pps_locate: {locate_pps_locate}, locate_total_locate: {locate_total_locate}')
+        
+        # Determine which locate type we want to use (cheapest one)
+        selected_locate_type = None
+        # Convert all the None values to float('inf') for comparison
+        locate_pps_preborrow = locate_pps_preborrow if locate_pps_preborrow is not None else float('inf')
+        locate_pps_singleuse = locate_pps_singleuse if locate_pps_singleuse is not None else float('inf')
+        locate_pps_locate = locate_pps_locate if locate_pps_locate is not None else float('inf')
+        locate_total_preborrow = locate_total_preborrow if locate_total_preborrow is not None else float('inf')
+        locate_total_singleuse = locate_total_singleuse if locate_total_singleuse is not None else float('inf')
+        locate_total_locate = locate_total_locate if locate_total_locate is not None else float('inf')
+        if locate_pps_preborrow is not None or locate_pps_singleuse is not None or locate_pps_locate is not None:
+            if locate_total_preborrow <= locate_total_singleuse and locate_total_preborrow <= locate_total_locate:
+                selected_locate_type = 'PreBorrow'
+                locate_pps = locate_pps_preborrow
+                locate_total = locate_total_preborrow
+                print(colored(f'Selected PreBorrow ({symbol}, $ {locate_total})', 'cyan'))
+            elif locate_total_singleuse <= locate_total_preborrow and locate_total_singleuse <= locate_total_locate:
+                selected_locate_type = 'SingleUse'
+                locate_pps = locate_pps_singleuse
+                locate_total = locate_total_singleuse
+                print(colored(f'Selected SingleUse ({symbol}, $ {locate_total})', 'cyan'))
+            else:
+                selected_locate_type = 'Locate'
+                locate_pps = locate_pps_locate
+                locate_total = locate_total_locate
+                print(colored(f'Selected Locate ({symbol}, $ {locate_total})', 'cyan'))
 
         if locate_total <= max_price:
-            self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-') and contains(@id, '-cell-8')]/span[1]").click()
+            self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-{selected_locate_type}') and contains(@id, '-cell-8')]/span[1]").click()
             if debug_info:
                 print(colored(f'HTB Locate accepted ({symbol}, $ {locate_total})', 'cyan'))
         else:
-            self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-') and contains(@id, '-cell-8')]/span[2]").click()
+            self.driver.find_element(By.XPATH, f"//*[contains(@id, 'oitem-l-{symbol.upper()}-{selected_locate_type}') and contains(@id, '-cell-8')]/span[2]").click()
+            if debug_info:
+                print(colored(f'HTB Locate declined ({symbol}, $ {locate_total})', 'red'))
 
         return Data(locate_pps, locate_total)
-        # TODO create a function to get the pps and another one that just locates the shares
 
     def credit_locates(self, symbol: str, quantity=None):
         """
