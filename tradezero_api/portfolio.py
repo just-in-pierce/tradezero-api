@@ -123,12 +123,12 @@ class Portfolio:
             warnings.warn(f'Symbol {symbol} is not present in active orders')
             return False
 
-    def cancel_active_order(self, symbol: str, order_ref_numbers: list) -> None:
+    def cancel_active_orders(self, symbol: str, order_ref_numbers: list) -> None:
         """
-        Cancel a pending order
+        Cancel a pending orders
 
         :param symbol:
-        :param order_type: enum of OrderType
+        :param order_type: enum of OrderType - NotImplemented
         :return: None
         """
         symbol = symbol.upper()
@@ -146,3 +146,20 @@ class Portfolio:
                 cancel_button.click()
             except:
                 print(f'Could not cancel order with ref number {order_id} for symbol {symbol}. It may have already been executed or canceled.')
+
+    def get_active_order_ref_numbers_ticker(self, symbol: str) -> list:
+        """
+        Get the reference numbers of all active orders for a given symbol
+
+        :param symbol: str
+        :return: list of order reference numbers
+        """
+        self._switch_portfolio_tab(tab=PortfolioTab.active_orders)
+        active_orders = self.get_active_orders()
+
+        if active_orders is None:
+            return []
+
+        symbol = symbol.upper()
+        order_ref_numbers = active_orders[active_orders['symbol'] == symbol]['ref_number'].values.tolist()
+        return order_ref_numbers
