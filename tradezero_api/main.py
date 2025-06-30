@@ -452,6 +452,16 @@ class TradeZero(Time):
         if log_info is True:
             print(f"Time: {self.time}, Order direction: {order_direction}, Symbol: {symbol}, "
                   f"Limit Price: {limit_price}, Shares amount: {share_amount}")
+            
+        if order_direction == Order.SHORT:
+            try:
+                time.sleep(1)
+                self.driver.find_element(By.ID, "short-locate-button-cancel").click()
+                print(colored("Popup closed.", 'green'))
+                return False
+            except:
+                return True
+        return True
 
     @time_it
     def market_order(self, order_direction: Order, symbol: str, share_amount: int,
