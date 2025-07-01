@@ -163,3 +163,24 @@ class Portfolio:
         symbol = symbol.upper()
         order_ref_numbers = active_orders[active_orders['symbol'] == symbol]['ref_number'].values.tolist()
         return order_ref_numbers
+    
+    def get_locate_inventory(self, return_type: str = 'df') -> pd.DataFrame:
+        """
+        Get the locate inventory as a DataFrame
+
+        :return: pandas.DataFrame with locate inventory
+        """
+
+        located_symbols = self.driver.find_elements(By.XPATH, '//*[@id="locate-inventory-table"]/tbody/tr/td[1]')
+        if len(located_symbols) == 0:
+            warnings.warn('Locate inventory is empty')
+            return pd.DataFrame()
+        
+        df = pd.read_html(self.driver.page_source, attrs={'id': 'locate-inventory-table'}, keep_default_na=False)[0]
+        df.columns = ['symbol', 'tooltip', 'available', 'unavailable', "empty", "action"]
+        # drop tooltip and action columns
+        df = df.drop(columns=['tooltip', 'empty', "action"])
+
+        if return_type == 'dict':
+            return df.to_dict('index')
+        return df
