@@ -578,6 +578,55 @@ class TradeZero(Time):
         if log_info is True:
             print(f"Time: {self.time}, Order direction: {order_direction}, Symbol: {symbol}, "
                   f"Stop Price: {stop_price}, Shares amount: {share_amount}")
+            
+    @time_it
+    def stop_limit_order(self, order_direction: Order, symbol: str, share_amount: int, limit_price: float,
+                         stop_price: float, time_in_force: TIF = TIF.DAY, log_info: bool = False):
+        """
+        Place a Stop Limit Order, the following params are required: order_direction, symbol, share_amount,
+        limit_price and stop_price.
+        :param order_direction: str: 'buy', 'sell', 'short', 'cover'
+        :param symbol: str: e.g: 'aapl', 'amd', 'NVDA', 'GM'
+        :param limit_price: float
+        :param stop_price: float
+        :param share_amount: int
+        :param time_in_force: str, default: 'DAY', must be one of the following: 'DAY', 'GTC', or 'GTX'
+        :param log_info: bool, if True it will print information about the order
+        :return: True if operation succeeded
+        :raises AttributeError: if time_in_force argument not one of the following: 'DAY', 'GTC', 'GTX'
+        """
+        symbol = symbol.lower()
+        order_direction = order_direction.value
+        time_in_force = time_in_force.value
+
+
+        if time_in_force not in ['DAY', 'GTC', 'GTX']:
+            raise AttributeError(f"Error: time_in_force argument must be one of the following: 'DAY', 'GTC', 'GTX'")
+        
+        self.load_symbol(symbol)
+
+        order_menu = Select(self.driver.find_element(By.ID, "trading-order-select-type"))
+        order_menu.select_by_index(3)
+
+        tif_menu = Select(self.driver.find_element(By.ID, "trading-order-select-time"))
+        tif_menu.select_by_visible_text(time_in_force)
+
+        input_quantity = self.driver.find_element(By.ID, "trading-order-input-quantity")
+        input_quantity.clear()
+        input_quantity.send_keys(share_amount)
+
+        price_input = self.driver.find_element(By.ID, "trading-order-input-price")
+        price_input.clear()
+        price_input.send_keys(limit_price)
+        price_input = self.driver.find_element(By.ID, "trading-order-input-sprice")
+        price_input.clear()
+        price_input.send_keys(stop_price)
+
+        self.driver.find_element(By.ID, f"trading-order-button-{order_direction}").click()
+
+        if log_info is True:
+            print(f"Time: {self.time}, Order direction: {order_direction}, Symbol: {symbol}, "
+                  f"Limit Price: {limit_price}, Stop Price: {stop_price}, Shares amount: {share_amount}")
 
 
     @time_it
