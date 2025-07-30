@@ -259,7 +259,7 @@ class TradeZero(Time):
             return quantity
         return int(quantity)
 
-    def locate_stock(self, symbol: str, share_amount: int, max_price: float = 0, debug_info: bool = False):
+    def locate_stock(self, symbol: str, share_amount: int, max_price: float = 0, debug_info: bool = False, locate_popup_triggered: bool = False):
         """
         Locate a stock, requires: stock symbol, and share_amount. optional: max_price.
         if the locate_price is less than max_price: it will accept, else: decline.
@@ -273,23 +273,24 @@ class TradeZero(Time):
         """
         Data = namedtuple('Data', ['price_per_share', 'total'])
 
-        if share_amount is not None and share_amount % 100 != 0:
-            raise Exception(f'ERROR: share_amount is not divisible by 100 ({share_amount=})')
+        if not locate_popup_triggered:
+            if share_amount is not None and share_amount % 100 != 0:
+                raise Exception(f'ERROR: share_amount is not divisible by 100 ({share_amount=})')
 
-        if not self.load_symbol(symbol):
-            return
+            if not self.load_symbol(symbol):
+                return
 
-        #if self.last <= 1.00:
-        #    print(f'Error: Cannot locate stocks priced under $1.00 ({symbol=}, price={self.last})')
+            #if self.last <= 1.00:
+            #    print(f'Error: Cannot locate stocks priced under $1.00 ({symbol=}, price={self.last})')
 
-        self.driver.find_element(By.ID, "locate-tab-1").click()
-        input_symbol = self.driver.find_element(By.ID, "short-list-input-symbol")
-        input_symbol.clear()
-        input_symbol.send_keys(symbol, Keys.RETURN)
+            self.driver.find_element(By.ID, "locate-tab-1").click()
+            input_symbol = self.driver.find_element(By.ID, "short-list-input-symbol")
+            input_symbol.clear()
+            input_symbol.send_keys(symbol, Keys.RETURN)
 
-        input_shares = self.driver.find_element(By.ID, "short-list-input-shares")
-        input_shares.clear()
-        input_shares.send_keys(share_amount)
+            input_shares = self.driver.find_element(By.ID, "short-list-input-shares")
+            input_shares.clear()
+            input_shares.send_keys(share_amount)
 
         while self.driver.find_element(By.ID, "short-list-locate-status").text == '':
             time.sleep(0.1)
@@ -410,8 +411,32 @@ class TradeZero(Time):
         self.driver.find_element(By.XPATH, f'//*[@id="inv-{symbol.upper()}-SingleUse-sell"]/button').click()
 
     @time_it
+    def scroll_top(self):
+        self.driver.execute_script("window.scrollTo(0, 0)")
+
+    @time_it
+    def handle_locate_popup(self, symbol: str, share_amount: int, locate: bool = True, locate_max_price: float = 0.0):
+        status = None
+        if locate:
+            self.driver.find_element(By.ID, "short-locate-button-locate").click()
+            time.sleep(1)
+            self.scroll_top()
+            locate_share_amount = int(((share_amount + 99) // 100) * 100)
+            try:
+                self.locate_stock(symbol=symbol, share_amount=locate_share_amount, max_price=locate_max_price, debug_info=True, locate_popup_triggered=True)
+                status = "popup_located_shares"
+            except Exception as e:
+                print(colored(f"Error locating stock: {e}", 'red'))
+                status = "failed_to_locate"
+        else:
+            self.driver.find_element(By.ID, "short-locate-button-cancel").click()
+            status = "cancelled"
+        print(colored("Popup closed.", 'green'))
+        return status
+
+    @time_it
     def limit_order(self, order_direction: Order, symbol: str, share_amount: int, limit_price: float,
-                    time_in_force: TIF = TIF.DAY, log_info: bool = False):
+                    time_in_force: TIF = TIF.DAY, log_info: bool = False, locate: bool = True, locate_max_price: float = 0.0):
         """
         Place a Limit Order, the following params are required: order_direction, symbol, share_amount, and limit_price.
 
@@ -456,16 +481,27 @@ class TradeZero(Time):
         if order_direction == Order.SHORT:
             try:
                 time.sleep(1)
-                self.driver.find_element(By.ID, "short-locate-button-cancel").click()
-                print(colored("Popup closed.", 'green'))
-                return False
-            except:
+                result = self.handle_locate_popup(symbol, share_amount, locate=locate, locate_max_price=locate_max_price)
+                if result == "popup_located_shares":
+                    limit_order_result = self.limit_order(Order.SHORT, symbol, share_amount, limit_price, TIF.DAY, log_info, locate=False, locate_max_price=locate_max_price)
+                    return limit_order_result
+                elif result == "failed_to_locate":
+                    print(colored(f"Failed to locate shares for {symbol}. Order not placed.", 'red'))
+                    return False
+                elif result == "cancelled":
+                    print(colored(f"Order cancelled for {symbol}.", 'yellow'))
+                    return False
+                elif result is None:
+                    print(colored(f"Error handling locate popup for {symbol}.", 'red'))
+                    return False
+            except Exception as e:
+                print(f"Error handling locate popup: {e}")
                 return True
         return True
 
     @time_it
     def market_order(self, order_direction: Order, symbol: str, share_amount: int,
-                     time_in_force: TIF = TIF.DAY, log_info: bool = False):
+                     time_in_force: TIF = TIF.DAY, log_info: bool = False, locate: bool = False, locate_max_price: float = 0.0):
         """
         Place a Market Order, The following params are required: order_direction, symbol, and share_amount
 
@@ -510,10 +546,21 @@ class TradeZero(Time):
         if order_direction == Order.SHORT:
             try:
                 time.sleep(1)
-                self.driver.find_element(By.ID, "short-locate-button-cancel").click()
-                print(colored("Popup closed.", 'green'))
-                return False
-            except:
+                result = self.handle_locate_popup(symbol, share_amount, locate=locate, locate_max_price=locate_max_price)
+                if result == "popup_located_shares":
+                    market_order_result = self.market_order(Order.SHORT, symbol, share_amount, TIF.DAY, log_info, locate=False, locate_max_price=locate_max_price)
+                    return market_order_result
+                elif result == "failed_to_locate":
+                    print(colored(f"Failed to locate shares for {symbol}. Order not placed.", 'red'))
+                    return False
+                elif result == "cancelled":
+                    print(colored(f"Order cancelled for {symbol}.", 'yellow'))
+                    return False
+                elif result is None:
+                    print(colored(f"Error handling locate popup for {symbol}.", 'red'))
+                    return False
+            except Exception as e:
+                print(f"Error handling locate popup: {e}")
                 return True
         return True
     
@@ -523,8 +570,10 @@ class TradeZero(Time):
         This is useful when placing orders that require locating shares.
         """
         try:
+            self.scroll_top()
             self.driver.find_element(By.ID, "short-locate-button-cancel").click()
             print(colored("Popup closed.", 'green'))
+            self.scroll_top()
         except:
             pass
 
