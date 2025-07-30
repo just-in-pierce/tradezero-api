@@ -22,7 +22,7 @@ from .watchlist import Watchlist
 from .portfolio import Portfolio
 from .notification import Notification
 from .account import Account
-from .enums import Order, TIF
+from .enums import Order, TIF, OrderType
 
 os.system('color')
 
@@ -194,6 +194,38 @@ class TradeZero(Time):
     def current_symbol(self):
         """get current symbol"""
         return self.driver.find_element(By.ID, 'trading-order-symbol').text.replace('(USD)', '')
+    
+    """
+    h-total-unrealized-value: total_unrealized
+    h-realized-value: day_realized
+    h-unrealizd-pl-value: day_unrealized
+    h-total-pl-value: day_total
+    h-exposure-value: equity_exposure
+    """
+    @property
+    def day_total(self):
+        """get day total"""
+        return float(self.driver.find_element(By.ID, 'h-total-pl-value').text.replace('$', ''))
+
+    @property
+    def total_unrealized(self):
+        """get total unrealized P/L"""
+        return float(self.driver.find_element(By.ID, 'h-total-unrealized-value').text.replace('$', ''))
+
+    @property
+    def day_realized(self):
+        """get day realized P/L"""
+        return float(self.driver.find_element(By.ID, 'h-realized-value').text.replace('$', ''))
+
+    @property
+    def day_unrealized(self):
+        """get day unrealized P/L"""
+        return float(self.driver.find_element(By.ID, 'h-unrealized-pl-value').text.replace('$', ''))
+
+    @property
+    def equity_exposure(self):
+        """get equity exposure"""
+        return float(self.driver.find_element(By.ID, 'h-exposure-value').text.replace('$', ''))
 
     @property
     def bid(self):
@@ -728,3 +760,43 @@ class TradeZero(Time):
             print(f"Time: {self.time}, Order direction: {order_direction}, Symbol: {symbol}, "
                     f"Low Price: {low_price}, High Price: {high_price}, Shares amount: {share_amount}")
         return
+    
+    @time_it
+    def close_all_positions(self, order_type: OrderType, panic=False):
+        """
+        Close all open positions for the current user.
+        """
+        
+        # First cancel all active orders if any
+        active_orders_df = self.Portfolio.get_active_orders()
+
+        if active_orders_df is not None and not active_orders_df.empty:
+            print(f"Found {len(active_orders_df)} active orders to cancel.")
+            symbols = active_orders_df['symbol'].unique()
+            for symbol in symbols:
+                symbol_ref_numbers = self.Portfolio.get_active_order_ref_numbers_ticker(symbol)
+                self.Portfolio.cancel_active_orders(symbol, symbol_ref_numbers)
+
+        portfolio_df = self.Portfolio.portfolio()
+
+        while portfolio_df is not None and not portfolio_df.empty:
+            print(f"Closing positions: {len(portfolio_df)} positions found")
+
+            for index, row in portfolio_df.iterrows():
+                symbol = row['symbol']
+                quantity = row['quantity']
+                order_direction = Order.COVER if quantity < 0 else Order.SELL
+                if order_type == OrderType.MARKET:
+                    print(f"Closing position: {symbol}, Quantity: {abs(quantity)}, Order Type: Market")
+                    self.market_order(order_direction, symbol, abs(quantity), log_info=True)
+                elif order_type == OrderType.LIMIT:
+                    self.load_symbol(symbol)
+                    if panic:
+                        limit_price = self.last - 0.01 if order_direction == Order.SELL else self.last + 0.01 # TODO check if this is fine
+                    else:
+                        # set limit price to the ask if covering or to the bid if selling
+                        limit_price = self.ask if order_direction == Order.COVER else self.bid
+                    print(f"Closing position: {symbol}, Quantity: {abs(quantity)}, Order Type: Limit, Limit Price: {limit_price}")
+                    self.limit_order(order_direction, symbol, abs(quantity), limit_price, log_info=True)
+                
+            portfolio_df = self.Portfolio.portfolio()
