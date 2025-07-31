@@ -205,27 +205,27 @@ class TradeZero(Time):
     @property
     def day_total(self):
         """get day total"""
-        return float(self.driver.find_element(By.ID, 'h-total-pl-value').text.replace('$', ''))
+        return float(self.driver.find_element(By.ID, 'h-total-pl-value').text.replace('$', '').replace(',', ''))
 
     @property
     def total_unrealized(self):
         """get total unrealized P/L"""
-        return float(self.driver.find_element(By.ID, 'h-total-unrealized-value').text.replace('$', ''))
+        return float(self.driver.find_element(By.ID, 'h-total-unrealized-value').text.replace('$', '').replace(',', ''))
 
     @property
     def day_realized(self):
         """get day realized P/L"""
-        return float(self.driver.find_element(By.ID, 'h-realized-value').text.replace('$', ''))
+        return float(self.driver.find_element(By.ID, 'h-realized-value').text.replace('$', '').replace(',', ''))
 
     @property
     def day_unrealized(self):
         """get day unrealized P/L"""
-        return float(self.driver.find_element(By.ID, 'h-unrealized-pl-value').text.replace('$', ''))
+        return float(self.driver.find_element(By.ID, 'h-unrealized-pl-value').text.replace('$', '').replace(',', ''))
 
     @property
     def equity_exposure(self):
         """get equity exposure"""
-        return float(self.driver.find_element(By.ID, 'h-exposure-value').text.replace('$', ''))
+        return float(self.driver.find_element(By.ID, 'h-exposure-value').text.replace('$', '').replace(',', ''))
 
     @property
     def bid(self):
