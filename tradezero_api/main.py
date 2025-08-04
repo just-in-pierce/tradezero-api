@@ -784,12 +784,12 @@ class TradeZero(Time):
 
             for index, row in portfolio_df.iterrows():
                 symbol = row['symbol']
-                quantity = row['quantity']
+                quantity = row['qty']
                 order_direction = Order.COVER if quantity < 0 else Order.SELL
-                if order_type == OrderType.MARKET:
+                if order_type == OrderType.market:
                     print(f"Closing position: {symbol}, Quantity: {abs(quantity)}, Order Type: Market")
                     self.market_order(order_direction, symbol, abs(quantity), log_info=True)
-                elif order_type == OrderType.LIMIT:
+                elif order_type == OrderType.limit:
                     self.load_symbol(symbol)
                     if panic:
                         limit_price = self.last - 0.01 if order_direction == Order.SELL else self.last + 0.01 # TODO check if this is fine
