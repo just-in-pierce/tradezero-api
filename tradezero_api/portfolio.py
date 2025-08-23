@@ -46,6 +46,39 @@ class Portfolio:
         if return_type == 'dict':
             return df.to_dict('index')
         return df
+    
+    @overload
+    def closed_positions(self, return_type: Literal['df'] = 'df') -> Optional[pd.DataFrame]:
+        ...
+
+    @overload
+    def closed_positions(self, return_type: Literal['dict']) -> Optional[dict]:
+        ...
+    
+    def closed_positions(self, return_type: Literal['df', 'dict'] = 'df') -> pd.DataFrame | dict | None:
+        """
+        return the Closed Positions table as a pandas.DataFrame or nested dict, with the symbol column as index.
+        the column names are the following: 'type', 'qty', 'p_close', 'entry',
+        'price', 'change', '%change', 'day_pnl', 'pnl', 'closed'
+        note that if there are no closed positions Pandas won't be able to locate the table,
+        and therefore will return None
+
+        :param return_type: 'df' or 'dict'
+        :return: pandas.DataFrame or None if table empty
+        """
+        closed_positions = self.driver.find_elements(By.XPATH, '//*[@id="cpTable-1"]/tbody/tr/td[1]')
+        df = pd.read_html(self.driver.page_source, attrs={'id': 'cpTable-1'}, keep_default_na=False)[0]
+
+        if len(closed_positions) == 0 or df.loc[0, 0].lower() == "you have no closed positions.":
+            warnings.warn('There are no closed positions')
+            return None
+
+        df.columns = [
+            'symbol', 'type', 'qty', 'p_close', 'entry', 'close', 'pnl', 'day_pnl', 'opened', 'closed', "overnight"
+        ]
+        if return_type == 'dict':
+            return df.to_dict('index')
+        return df
 
     def open_orders(self) -> pd.DataFrame:
         """
