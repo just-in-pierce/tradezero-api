@@ -413,7 +413,7 @@ class TradeZero(Time):
     def credit_locates(self, symbol: str, quantity=None):
         """
         sell/ credit stock locates, if no value is given in 'quantity', it will credit all the shares
-        available of the given symbol.
+        available of the given symbol. Supports all locate types: PreBorrow, SingleUse, and Locate.
 
         :param symbol: str
         :param quantity: amount of shares to sell, must be a multiple of 100, ie: 100, 200, 300
@@ -427,20 +427,50 @@ class TradeZero(Time):
         if symbol.upper() not in located_symbols:
             raise Exception(f"ERROR! cannot find {symbol} in located symbols")
 
-        if quantity is not None:
-            if quantity % 100 != 0:
-                raise ValueError(f"ERROR! quantity is not divisible by 100 ({quantity=})")
-
-            located_shares = float(self.driver.find_element(By.ID, f"inv-{symbol.upper()}-SingleUse-cell-2").text)
-            if quantity > located_shares:
-                raise ValueError(f"ERROR! you cannot credit more shares than u already have "
-                                 f"({quantity} vs {located_shares}")
-
-            input_quantity = self.driver.find_element(By.ID, f"inv-{symbol.upper()}-SingleUse-sell-qty")
-            input_quantity.clear()
-            input_quantity.send_keys(quantity)
-
-        self.driver.find_element(By.XPATH, f'//*[@id="inv-{symbol.upper()}-SingleUse-sell"]/button').click()
+        # Check for all three locate types: PreBorrow, SingleUse, Locate
+        locate_types = ['PreBorrow', 'SingleUse', 'Locate']
+        credited_shares = 0
+        
+        for locate_type in locate_types:
+            try:
+                # Check if this locate type exists for the symbol
+                shares_element = self.driver.find_element(By.ID, f"inv-{symbol.upper()}-{locate_type}-cell-2")
+                located_shares = float(shares_element.text)
+                
+                if located_shares <= 0:
+                    continue
+                    
+                if quantity is not None:
+                    if quantity % 100 != 0:
+                        raise ValueError(f"ERROR! quantity is not divisible by 100 ({quantity=})")
+                    
+                    remaining_to_credit = quantity - credited_shares
+                    if remaining_to_credit <= 0:
+                        break
+                        
+                    shares_to_credit = min(remaining_to_credit, located_shares)
+                    
+                    if shares_to_credit > located_shares:
+                        raise ValueError(f"ERROR! you cannot credit more shares than available for {locate_type} "
+                                       f"({shares_to_credit} vs {located_shares})")
+                    
+                    # Set the quantity for this locate type
+                    input_quantity = self.driver.find_element(By.ID, f"inv-{symbol.upper()}-{locate_type}-sell-qty")
+                    input_quantity.clear()
+                    input_quantity.send_keys(int(shares_to_credit))
+                    credited_shares += shares_to_credit
+                
+                # Click the sell button for this locate type
+                # button-red credit-button
+                self.driver.find_element(By.XPATH, f'//*[@id="inv-{symbol.upper()}-{locate_type}-sell"]/button').click()
+                print(f"Credited {located_shares if quantity is None else min(shares_to_credit if quantity is not None else located_shares, located_shares)} shares of {symbol} ({locate_type})")
+                
+            except Exception as e:
+                # This locate type doesn't exist for this symbol, continue to next type
+                continue
+        
+        if quantity is not None and credited_shares < quantity:
+            print(f"WARNING: Only credited {credited_shares} shares out of requested {quantity} for {symbol}")
 
     @time_it
     def scroll_top(self):
