@@ -324,7 +324,11 @@ class TradeZero(Time):
             input_shares.clear()
             input_shares.send_keys(share_amount)
 
+        timeout = 10  # 10 second timeout
+        start_time = time.time()
         while self.driver.find_element(By.ID, "short-list-locate-status").text == '':
+            if time.time() - start_time > timeout:
+                raise Exception(f"Timeout waiting for locate status after {timeout} seconds")
             time.sleep(0.1)
 
         if self.driver.find_element(By.ID, "short-list-locate-status").text == 'Easy to borrow':
