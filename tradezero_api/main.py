@@ -801,23 +801,70 @@ class TradeZero(Time):
         Close all open positions for the current user.
         """
         
-        # First cancel all active orders if any
-        active_orders_df = self.Portfolio.get_active_orders()
+        def cancel_orders():
+            active_orders_df = self.Portfolio.get_active_orders()
 
-        if active_orders_df is not None and not active_orders_df.empty:
-            print(f"Found {len(active_orders_df)} active orders to cancel.")
-            symbols = active_orders_df['symbol'].unique()
-            for symbol in symbols:
-                symbol_ref_numbers = self.Portfolio.get_active_order_ref_numbers_ticker(symbol)
-                self.Portfolio.cancel_active_orders(symbol, symbol_ref_numbers)
+            if active_orders_df is not None and not active_orders_df.empty:
+                print(f"Found {len(active_orders_df)} active orders to cancel.")
+                symbols = active_orders_df['symbol'].unique()
+                for symbol in symbols:
+                    symbol_ref_numbers = self.Portfolio.get_active_order_ref_numbers_ticker(symbol)
+                    self.Portfolio.cancel_active_orders(symbol, symbol_ref_numbers)
+
+        cancel_orders()
 
         portfolio_df = self.Portfolio.portfolio()
 
         while portfolio_df is not None and not portfolio_df.empty:
             print(f"Closing positions: {len(portfolio_df)} positions found")
-
+            cancel_orders()
             for index, row in portfolio_df.iterrows():
                 symbol = row['symbol']
+                quantity = row['qty']
+                order_direction = Order.COVER if quantity < 0 else Order.SELL
+                if order_type == OrderType.market:
+                    print(f"Closing position: {symbol}, Quantity: {abs(quantity)}, Order Type: Market")
+                    self.market_order(order_direction, symbol, abs(quantity), log_info=True)
+                elif order_type == OrderType.limit:
+                    self.load_symbol(symbol)
+                    if panic:
+                        limit_price = self.last - 0.01 if order_direction == Order.SELL else self.last + 0.01 # TODO check if this is fine
+                    else:
+                        # set limit price to the ask if covering or to the bid if selling
+                        limit_price = self.ask if order_direction == Order.COVER else self.bid
+                    print(f"Closing position: {symbol}, Quantity: {abs(quantity)}, Order Type: Limit, Limit Price: {limit_price}")
+                    self.limit_order(order_direction, symbol, abs(quantity), limit_price, log_info=True)
+                
+            portfolio_df = self.Portfolio.portfolio()
+
+    @time_it
+    def close_all_positions_ticker(self, ticker: str, order_type: OrderType, panic=False, timeout_seconds: int = 30):
+        """
+        Close all open positions for the given ticker.
+        """
+        
+        # First cancel all active orders if any
+        def cancel_orders():
+            active_orders_df = self.Portfolio.get_active_orders()
+
+            if active_orders_df is not None and not active_orders_df.empty:
+                print(f"Found {len(active_orders_df)} active orders to cancel.")
+                symbol_ref_numbers = self.Portfolio.get_active_order_ref_numbers_ticker(ticker)
+                self.Portfolio.cancel_active_orders(ticker, symbol_ref_numbers)
+
+        cancel_orders()
+
+        portfolio_df = self.Portfolio.portfolio()
+        
+        # timeout mechanism to avoid infinite loop
+        start_time = time.time()
+        while portfolio_df is not None and not portfolio_df.empty and ticker in portfolio_df['symbol'].values and (time.time() - start_time) < timeout_seconds:
+            print(f"Closing positions for {ticker}")
+            cancel_orders()
+            for index, row in portfolio_df.iterrows():
+                symbol = row['symbol']
+                if symbol != ticker:
+                    continue
                 quantity = row['qty']
                 order_direction = Order.COVER if quantity < 0 else Order.SELL
                 if order_type == OrderType.market:
