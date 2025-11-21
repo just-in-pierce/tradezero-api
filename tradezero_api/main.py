@@ -193,7 +193,7 @@ class TradeZero(Time):
 
     def current_symbol(self):
         """get current symbol"""
-        return self.driver.find_element(By.ID, 'trading-order-symbol').text.replace('(USD)', '')
+        return self.driver.find_element(By.ID, 'trading-order-input-symbol').text.replace('(USD)', '')
     
     """
     h-total-unrealized-value: total_unrealized
